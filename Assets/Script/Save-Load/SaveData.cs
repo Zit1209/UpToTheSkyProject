@@ -1,9 +1,8 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 /// <summary>
 /// Trigger zone that saves player data when entered
-/// Attach this to a GameObject with a trigger collider
+/// UPDATED: Thêm lưu skin đã chọn
 /// </summary>
 [RequireComponent(typeof(Collider))]
 public class SaveDataTriggerZone : MonoBehaviour
@@ -47,11 +46,24 @@ public class SaveDataTriggerZone : MonoBehaviour
             PlayerPrefs.SetFloat("PlayTime", playTimeScore.GetPlayTime());
         }
 
+        // ===== MỚI: SAVE SKIN =====
+        // Lưu skin hiện tại của player
+        if (SkinManager.HasSelectedSkin())
+        {
+            string currentSkin = SkinManager.LoadSelectedSkin();
+            PlayerPrefs.SetString("SavedSkin", currentSkin);
+            Debug.Log($"💾 Đã lưu skin: {currentSkin}");
+        }
+        // ==========================
+
         // Save dialogue progress
         SaveDialogueProgress();
 
+        // Save có data hay không
+        PlayerPrefs.SetInt("HasSaveData", 1);
+        
         PlayerPrefs.Save();
-        Debug.Log("Game data saved!");
+        Debug.Log("✅ Game data saved!");
     }
 
     private void SaveDialogueProgress()
@@ -62,12 +74,8 @@ public class SaveDataTriggerZone : MonoBehaviour
         // Save the count
         PlayerPrefs.SetInt("DialogueCount", dialogueZones.Length);
 
-        // For each dialogue zone, we need to track if it has been triggered
-        // This is a simplified approach - in a real game, you'd use a more robust system
         for (int i = 0; i < dialogueZones.Length; i++)
         {
-            // You would need to add a public property to DialogueTriggerZone to check if triggered
-            // For now, we'll save placeholder data
             PlayerPrefs.SetInt($"Dialogue_{i}_Read", 0);
         }
     }
