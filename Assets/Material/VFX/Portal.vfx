@@ -2563,7 +2563,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Color, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"r":771.4431762695313,"g":0.0,"b":2325.044189453125,"a":1.0}'
+      m_SerializableObject: '{"r":386.5503234863281,"g":19.692153930664064,"b":22.694242477416993,"a":1.0}'
     m_Space: -1
   m_Property:
     name: _Color
@@ -2763,7 +2763,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
-      m_SerializableObject: 7
+      m_SerializableObject: -7
     m_Space: -1
   m_Property:
     name: _Speed
@@ -2797,7 +2797,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
-      m_SerializableObject: 7
+      m_SerializableObject: 10
     m_Space: -1
   m_Property:
     name: _Twirl
