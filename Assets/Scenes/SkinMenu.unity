@@ -154,7 +154,7 @@ MonoBehaviour:
   btnSkinYellow: {fileID: 1229797120}
   btnStartGame: {fileID: 1229797120}
   selectedText: {fileID: 0}
-  gameSceneName: Map2
+  gameSceneName: GamePlay
 --- !u!114 &87328926
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -989,7 +989,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 875.66, y: -519.94}
+  m_AnchoredPosition: {x: 875.66, y: -456}
   m_SizeDelta: {x: 168.685, y: 168.685}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1358591998
