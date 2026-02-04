@@ -2454,8 +2454,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   walkSpeed: 20
   runSpeed: 35
-  jumpImpulse: 25
-  forwardJumpBoost: 40
+  jumpImpulse: 50
+  forwardJumpBoost: 100
   airControlStrength: 0.2
   baseGravity: -45
   risingGravityMultiplier: 1
