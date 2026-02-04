@@ -31,6 +31,12 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Input Actions")]
     [SerializeField] private InputActionAsset inputAsset;
+    
+    [Header("Camera Reference")]
+    [SerializeField] private Transform cameraTransform;
+    
+    [Header("Debug")]
+    [SerializeField] private bool showDebugLogs = false;
 
     private CharacterController controller;
     private InputAction moveAction;
@@ -58,6 +64,9 @@ public class PlayerMovement : MonoBehaviour
     private int restHash;
     private int jumpHeightHash;
     private int gravityCeHash;
+    
+    // Dead zone để tránh drift
+    private const float INPUT_DEADZONE = 0.1f;
 
     private void Awake()
     {
@@ -66,6 +75,16 @@ public class PlayerMovement : MonoBehaviour
         if (animator == null)
         {
             animator = GetComponentInChildren<Animator>();
+        }
+        
+        // Auto-find camera nếu chưa assign
+        if (cameraTransform == null)
+        {
+            cameraTransform = Camera.main?.transform;
+            if (cameraTransform != null)
+            {
+                Debug.Log($"✅ Auto-found camera: {cameraTransform.name}");
+            }
         }
 
         speedHash = Animator.StringToHash("Speed");
@@ -78,21 +97,45 @@ public class PlayerMovement : MonoBehaviour
         if (inputAsset != null)
         {
             var playerActionMap = inputAsset.FindActionMap("Player");
-            moveAction = playerActionMap.FindAction("Move");
-            jumpAction = playerActionMap.FindAction("Jump");
-            runAction = playerActionMap.FindAction("Run");
+            if (playerActionMap != null)
+            {
+                moveAction = playerActionMap.FindAction("Move");
+                jumpAction = playerActionMap.FindAction("Jump");
+                runAction = playerActionMap.FindAction("Run");
+                
+                Debug.Log("✅ Input actions found and assigned!");
+            }
+            else
+            {
+                Debug.LogError("❌ Cannot find 'Player' action map!");
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ InputActionAsset is NULL!");
         }
     }
 
     private void OnEnable()
     {
-        if (moveAction != null) moveAction.Enable();
+        if (moveAction != null) 
+        {
+            moveAction.Enable();
+            Debug.Log("✅ Move action enabled");
+        }
+        
         if (jumpAction != null)
         {
             jumpAction.Enable();
             jumpAction.performed += OnJumpPerformed;
+            Debug.Log("✅ Jump action enabled");
         }
-        if (runAction != null) runAction.Enable();
+        
+        if (runAction != null) 
+        {
+            runAction.Enable();
+            Debug.Log("✅ Run action enabled");
+        }
     }
 
     private void OnDisable()
@@ -132,7 +175,7 @@ public class PlayerMovement : MonoBehaviour
         
         float speedValue = 0f;
         
-        if (moveInput.magnitude > 0.1f)
+        if (moveInput.magnitude > INPUT_DEADZONE)
         {
             speedValue = isRunning ? 1f : 0.5f; 
         }
@@ -140,7 +183,7 @@ public class PlayerMovement : MonoBehaviour
         animator.SetFloat(speedHash, speedValue);
         animator.SetFloat(directionHash, moveInput.x);
         
-        bool isResting = isGrounded && moveInput.magnitude < 0.1f && !isInKnockback;
+        bool isResting = isGrounded && moveInput.magnitude < INPUT_DEADZONE && !isInKnockback;
         animator.SetBool(restHash, isResting);
         
         float jumpHeight = isGrounded ? 0f : Mathf.Clamp01((velocity.y + 10f) / 20f);
@@ -177,11 +220,33 @@ public class PlayerMovement : MonoBehaviour
 
     private void ReadInput()
     {
+        Vector2 rawInput = Vector2.zero;
+        
         if (moveAction != null)
-            moveInput = moveAction.ReadValue<Vector2>();
+        {
+            rawInput = moveAction.ReadValue<Vector2>();
+        }
+        
+        // Apply deadzone
+        if (rawInput.magnitude < INPUT_DEADZONE)
+        {
+            moveInput = Vector2.zero;
+        }
+        else
+        {
+            moveInput = rawInput;
+        }
+        
+        // Debug log nếu bật
+        if (showDebugLogs && moveInput.magnitude > 0f)
+        {
+            Debug.Log($"📍 MoveInput: {moveInput} (magnitude: {moveInput.magnitude:F3})");
+        }
         
         if (runAction != null)
+        {
             isRunning = runAction.IsPressed();
+        }
     }
 
     private void CheckGrounded()
@@ -264,13 +329,11 @@ public class PlayerMovement : MonoBehaviour
     {
         velocity.y = jumpImpulse;
 
-        if (isRunning && moveInput.magnitude > 0.1f)
+        if (isRunning && moveInput.magnitude > INPUT_DEADZONE)
         {
-            Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
-            Vector3 worldDirection = transform.TransformDirection(inputDirection).normalized;
-
-            velocity.x += worldDirection.x * runSpeed * (forwardJumpBoost - 1f);
-            velocity.z += worldDirection.z * runSpeed * (forwardJumpBoost - 1f);
+            Vector3 moveDirection = GetCameraRelativeMovement();
+            velocity.x += moveDirection.x * runSpeed * (forwardJumpBoost - 1f);
+            velocity.z += moveDirection.z * runSpeed * (forwardJumpBoost - 1f);
         }
 
         if (animator != null)
@@ -361,14 +424,67 @@ public class PlayerMovement : MonoBehaviour
         controller.Move(velocity * Time.deltaTime);
     }
 
+    private Vector3 GetCameraRelativeMovement()
+    {
+        // Nếu không có input, return zero
+        if (moveInput.magnitude < INPUT_DEADZONE)
+        {
+            return Vector3.zero;
+        }
+        
+        if (cameraTransform == null)
+        {
+            Debug.LogWarning("⚠️ Camera transform is NULL! Using player forward.");
+            Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
+            return transform.TransformDirection(inputDirection).normalized;
+        }
+        
+        // Lấy camera forward và right, BỎ component Y
+        Vector3 cameraForward = cameraTransform.forward;
+        Vector3 cameraRight = cameraTransform.right;
+        
+        cameraForward.y = 0f;
+        cameraRight.y = 0f;
+        
+        cameraForward.Normalize();
+        cameraRight.Normalize();
+        
+        // Tính movement direction
+        Vector3 direction = (cameraForward * moveInput.y + cameraRight * moveInput.x);
+        
+        // QUAN TRỌNG: Chỉ normalize nếu magnitude > deadzone
+        if (direction.magnitude > INPUT_DEADZONE)
+        {
+            return direction.normalized;
+        }
+        
+        return Vector3.zero;
+    }
+
     private void HandleGroundMovement()
     {
-        float targetSpeed = isRunning ? runSpeed : walkSpeed;
-        Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
-        Vector3 worldDirection = transform.TransformDirection(inputDirection);
-        
-        velocity.x = worldDirection.x * targetSpeed;
-        velocity.z = worldDirection.z * targetSpeed;
+        // Nếu không có input, DỪNG LẠI
+        if (moveInput.magnitude < INPUT_DEADZONE)
+        {
+            velocity.x = 0f;
+            velocity.z = 0f;
+        }
+        else
+        {
+            float targetSpeed = isRunning ? runSpeed : walkSpeed;
+            Vector3 moveDirection = GetCameraRelativeMovement();
+            
+            velocity.x = moveDirection.x * targetSpeed;
+            velocity.z = moveDirection.z * targetSpeed;
+            
+            // Xoay player theo hướng di chuyển
+            if (moveDirection.magnitude > INPUT_DEADZONE)
+            {
+                float targetAngle = Mathf.Atan2(moveDirection.x, moveDirection.z) * Mathf.Rad2Deg;
+                float angle = Mathf.LerpAngle(transform.eulerAngles.y, targetAngle, Time.deltaTime * 10f);
+                transform.rotation = Quaternion.Euler(0f, angle, 0f);
+            }
+        }
 
         if (isGrounded && velocity.y <= 0f)
         {
@@ -382,13 +498,15 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleAirMovement()
     {
-        float targetSpeed = isRunning ? runSpeed : walkSpeed;
-        Vector3 inputDirection = new Vector3(moveInput.x, 0f, moveInput.y);
-        Vector3 worldDirection = transform.TransformDirection(inputDirection);
-        Vector3 airVelocity = worldDirection * targetSpeed * airControlStrength;
+        if (moveInput.magnitude > INPUT_DEADZONE)
+        {
+            float targetSpeed = isRunning ? runSpeed : walkSpeed;
+            Vector3 moveDirection = GetCameraRelativeMovement();
+            Vector3 airVelocity = moveDirection * targetSpeed * airControlStrength;
 
-        velocity.x += airVelocity.x * Time.deltaTime;
-        velocity.z += airVelocity.z * Time.deltaTime;
+            velocity.x += airVelocity.x * Time.deltaTime;
+            velocity.z += airVelocity.z * Time.deltaTime;
+        }
 
         ApplyGravity();
     }
@@ -476,5 +594,11 @@ public class PlayerMovement : MonoBehaviour
     public bool IsClimbing()
     {
         return currentState == MovementState.Climb;
+    }
+    
+    public void SetCameraTransform(Transform camera)
+    {
+        cameraTransform = camera;
+        Debug.Log($"✅ PlayerMovement: Camera reference set to {camera.name}");
     }
 }

@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Load player from bundle and setup components
-/// FINAL VERSION - Matches your actual PlayerMovement.cs
+/// UPDATED: Integrate with new CameraFollow script (New Input System)
 /// </summary>
 public class PlayerBundleLoader : MonoBehaviour
 {
@@ -23,10 +23,20 @@ public class PlayerBundleLoader : MonoBehaviour
     [Tooltip("Main Camera (optional - auto-find if null)")]
     public Camera mainCamera;
     
-    [Header("Camera Follow")]
+    [Header("Camera Follow Settings")]
     public bool enableCameraFollow = true;
     public Vector3 cameraOffset = new Vector3(0f, 2f, -5f);
     public float cameraSmooth = 5f;
+    
+    [Header("Camera Rotation Settings")]
+    public bool enableMouseRotation = true;
+    public float mouseSensitivity = 2f;
+    public float minVerticalAngle = -40f;
+    public float maxVerticalAngle = 80f;
+    
+    [Header("Cursor Settings")]
+    public bool lockCursorOnStart = true;
+    // Note: Cursor controls are now hardcoded in CameraFollow (ESC to toggle, LeftAlt to hold)
     
     [Header("References")]
     public MonoBehaviour playTimeScore;
@@ -202,7 +212,7 @@ public class PlayerBundleLoader : MonoBehaviour
     {
         Debug.Log("🔧 Setting up player...");
         
-        // Get PlayerMovement component directly
+        // Get PlayerMovement component
         PlayerMovement movement = player.GetComponent<PlayerMovement>();
         
         if (movement == null)
@@ -216,10 +226,8 @@ public class PlayerBundleLoader : MonoBehaviour
             {
                 Debug.Log("🎮 Assigning InputActionAsset...");
                 
-                // Disable component
                 movement.enabled = false;
                 
-                // Use reflection to set the inputAsset field
                 var inputField = typeof(PlayerMovement).GetField("inputAsset", 
                     System.Reflection.BindingFlags.NonPublic | 
                     System.Reflection.BindingFlags.Instance);
@@ -236,9 +244,7 @@ public class PlayerBundleLoader : MonoBehaviour
                 
                 yield return null;
                 
-                // Re-enable component
                 movement.enabled = true;
-                
                 Debug.Log("✅ PlayerMovement enabled!");
             }
             else
@@ -250,30 +256,149 @@ public class PlayerBundleLoader : MonoBehaviour
         // Setup Tag
         player.tag = "Player";
         
-        // Setup Camera Follow
+        // Add CharacterController if missing
+        CharacterController controller = player.GetComponent<CharacterController>();
+        if (controller == null)
+        {
+            controller = player.AddComponent<CharacterController>();
+            controller.center = new Vector3(0f, 1f, 0f);
+            controller.radius = 0.5f;
+            controller.height = 2f;
+            controller.slopeLimit = 45f;
+            controller.stepOffset = 0.3f;
+            Debug.Log("✅ Added CharacterController!");
+        }
+        
+        // Đợi 1 frame để đảm bảo player đã setup xong
+        yield return null;
+        
+        // Setup Camera Follow - QUAN TRỌNG: Dùng player.transform (đã spawn), KHÔNG phải prefab
         if (enableCameraFollow && mainCamera != null)
         {
+            Debug.Log($"🎥 Setting up camera follow for SPAWNED player: {player.name}");
+            Debug.Log($"🎥 Player position: {player.transform.position}");
+            Debug.Log($"🎥 Player instance ID: {player.GetInstanceID()}");
+            
             SetupCameraFollow(player.transform);
+            
+            // Đợi thêm 1 frame để camera kịp nhận target
+            yield return null;
+            
+            // Verify camera đã nhận target
+            CameraFollow camFollow = mainCamera.GetComponent<CameraFollow>();
+            if (camFollow != null && camFollow.target != null)
+            {
+                Debug.Log($"✅✅✅ Camera target verified: {camFollow.target.name}");
+                Debug.Log($"✅ Target instance ID: {camFollow.target.gameObject.GetInstanceID()}");
+                Debug.Log($"✅ Target position: {camFollow.target.position}");
+            }
+            else
+            {
+                Debug.LogError("❌❌❌ Camera target is still NULL after setup!");
+                
+                // Thử lại 1 lần nữa
+                Debug.LogWarning("🔄 Retrying SetTarget...");
+                if (camFollow != null)
+                {
+                    camFollow.SetTarget(player.transform);
+                    yield return null;
+                    
+                    if (camFollow.target != null)
+                    {
+                        Debug.Log("✅ Retry successful!");
+                    }
+                    else
+                    {
+                        Debug.LogError("❌ Retry failed!");
+                    }
+                }
+            }
         }
         
         Debug.Log("✅ Player setup completed!");
     }
     
-    void SetupCameraFollow(Transform target)
+    void SetupCameraFollow(Transform targetTransform)
     {
+        if (targetTransform == null)
+        {
+            Debug.LogError("❌ SetupCameraFollow: targetTransform is NULL!");
+            return;
+        }
+        
+        Debug.Log($"📸 SetupCameraFollow called");
+        Debug.Log($"📸 Target name: {targetTransform.name}");
+        Debug.Log($"📸 Target position: {targetTransform.position}");
+        Debug.Log($"📸 Target instance ID: {targetTransform.gameObject.GetInstanceID()}");
+        Debug.Log($"📸 Is prefab? {targetTransform.gameObject.scene.name == null}");
+        
+        if (mainCamera == null)
+        {
+            Debug.LogError("❌ mainCamera is NULL!");
+            mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                Debug.LogError("❌ Cannot find main camera!");
+                return;
+            }
+        }
+        
         // Check if CameraFollow already exists
         CameraFollow camFollow = mainCamera.GetComponent<CameraFollow>();
         
         if (camFollow == null)
         {
+            Debug.Log("➕ Creating new CameraFollow component...");
             camFollow = mainCamera.gameObject.AddComponent<CameraFollow>();
+            Debug.Log("✅ CameraFollow component created!");
+        }
+        else
+        {
+            Debug.Log("🔄 Found existing CameraFollow, reconfiguring...");
+            // Tắt component trước khi config
+            camFollow.enabled = false;
         }
         
-        camFollow.target = target;
+        // Configure properties TRƯỚC KHI set target
+        Debug.Log($"🔧 Configuring camera properties...");
         camFollow.offset = cameraOffset;
         camFollow.smoothSpeed = cameraSmooth;
+        camFollow.enableMouseRotation = enableMouseRotation;
+        camFollow.mouseSensitivity = mouseSensitivity;
+        camFollow.minVerticalAngle = minVerticalAngle;
+        camFollow.maxVerticalAngle = maxVerticalAngle;
+        camFollow.lockCursorOnStart = lockCursorOnStart;
         
-        Debug.Log("✅ Camera follow setup!");
+        Debug.Log($"🎯 Calling SetTarget with: {targetTransform.name}");
+        // QUAN TRỌNG: Gọi SetTarget() thay vì gán trực tiếp
+        camFollow.SetTarget(targetTransform);
+        
+        // Verify target đã được set
+        if (camFollow.target == null)
+        {
+            Debug.LogError("❌❌❌ TARGET IS STILL NULL AFTER SetTarget()!");
+            Debug.LogError($"❌ Tried to set: {targetTransform.name}");
+            
+            // Thử gán trực tiếp
+            Debug.LogWarning("🔧 Trying direct assignment...");
+            camFollow.target = targetTransform;
+            
+            if (camFollow.target != null)
+            {
+                Debug.Log("✅ Direct assignment worked!");
+            }
+        }
+        else
+        {
+            Debug.Log($"✅ Target confirmed: {camFollow.target.name}");
+            Debug.Log($"✅ Target instance matches: {camFollow.target.gameObject.GetInstanceID() == targetTransform.gameObject.GetInstanceID()}");
+        }
+        
+        // Enable component
+        camFollow.enabled = true;
+        Debug.Log("✅ CameraFollow enabled!");
+        
+        Debug.Log("ℹ️ Controls: ESC=toggle cursor | LeftAlt=hold to unlock");
     }
     
     public GameObject GetPlayer()

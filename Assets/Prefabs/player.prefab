@@ -2351,7 +2351,7 @@ GameObject:
   - component: {fileID: 1689246977213547785}
   - component: {fileID: 9106836708235223864}
   m_Layer: 0
-  m_Name: unitychan 1
+  m_Name: player
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2433,13 +2433,15 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4a9503bc07d6e75cd95deefe2aaa3889, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerCameraRotationSync
+  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 0}
-  offset: {x: 0, y: 2, z: -5}
+  offset: {x: 0, y: 10, z: -5}
   smoothSpeed: 5
-  lookAtTarget: 1
-  allowRotation: 0
-  rotationSpeed: 3
+  enableMouseRotation: 1
+  mouseSensitivity: 2
+  minVerticalAngle: -40
+  maxVerticalAngle: 80
+  lockCursorOnStart: 1
 --- !u!114 &9106836708235223864
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2470,6 +2472,8 @@ MonoBehaviour:
     m_Bits: 0
   animator: {fileID: 8745164170762485339}
   inputAsset: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  cameraTransform: {fileID: 0}
+  showDebugLogs: 0
 --- !u!1 &2732639554660656352
 GameObject:
   m_ObjectHideFlags: 0
