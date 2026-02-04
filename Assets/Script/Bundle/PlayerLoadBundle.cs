@@ -4,8 +4,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Load player từ bundle và setup đầy đủ components
-/// UPDATED: Load position từ save data nếu có
+/// Load player from bundle and setup components
+/// FINAL VERSION - Matches your actual PlayerMovement.cs
 /// </summary>
 public class PlayerBundleLoader : MonoBehaviour
 {
@@ -16,11 +16,11 @@ public class PlayerBundleLoader : MonoBehaviour
     public Vector3 defaultSpawnPosition = new Vector3(0f, 1f, 0f);
     public Transform spawnPoint;
     
-    [Header("Required Assets - GÁN TRONG INSPECTOR!")]
-    [Tooltip("InputActionAsset cho player (REQUIRED!)")]
+    [Header("Required Assets - ATTACH IN INSPECTOR!")]
+    [Tooltip("InputActionAsset for player (REQUIRED!)")]
     public InputActionAsset playerInputAsset;
     
-    [Tooltip("Main Camera (optional - tự động tìm nếu null)")]
+    [Tooltip("Main Camera (optional - auto-find if null)")]
     public Camera mainCamera;
     
     [Header("Camera Follow")]
@@ -29,7 +29,7 @@ public class PlayerBundleLoader : MonoBehaviour
     public float cameraSmooth = 5f;
     
     [Header("References")]
-    public PlayTimeScore playTimeScore;
+    public MonoBehaviour playTimeScore;
     
     private GameObject spawnedPlayer;
     private bool isLoading = false;
@@ -50,7 +50,7 @@ public class PlayerBundleLoader : MonoBehaviour
     {
         if (isLoading)
         {
-            Debug.LogWarning("⚠️ Đang load player...");
+            Debug.LogWarning("⚠️ Already loading player...");
             yield break;
         }
         
@@ -60,7 +60,7 @@ public class PlayerBundleLoader : MonoBehaviour
         string skinVersion = SkinManager.LoadSelectedSkin();
         string assetName = SkinManager.GetAssetNameFromVersion(skinVersion);
         
-        Debug.Log("═══════════════════════════════════");
+        Debug.Log("╔═══════════════════════════════════╗");
         Debug.Log($"🎨 Loading player: {skinVersion}");
         Debug.Log($"📦 Bundle: {bundleName}");
         Debug.Log($"🎯 Asset: {assetName}");
@@ -78,8 +78,8 @@ public class PlayerBundleLoader : MonoBehaviour
         // 3. Check file exists
         if (!File.Exists(path))
         {
-            Debug.LogError($"❌ Bundle không tồn tại: {path}");
-            Debug.LogError("Hãy build bundles trước!");
+            Debug.LogError($"❌ Bundle not found: {path}");
+            Debug.LogError("Please build bundles first!");
             isLoading = false;
             yield break;
         }
@@ -89,7 +89,7 @@ public class PlayerBundleLoader : MonoBehaviour
         
         if (bundle == null)
         {
-            Debug.LogError($"❌ Load bundle thất bại!");
+            Debug.LogError($"❌ Failed to load bundle!");
             isLoading = false;
             yield break;
         }
@@ -101,7 +101,7 @@ public class PlayerBundleLoader : MonoBehaviour
         
         if (prefab == null)
         {
-            Debug.LogError($"❌ Asset '{assetName}' không tìm thấy!");
+            Debug.LogError($"❌ Asset '{assetName}' not found!");
             bundle.Unload(true);
             isLoading = false;
             yield break;
@@ -109,10 +109,9 @@ public class PlayerBundleLoader : MonoBehaviour
         
         Debug.Log($"✅ Prefab loaded: {prefab.name}");
         
-        // ===== 6. XÁC ĐỊNH VỊ TRÍ SPAWN =====
+        // 6. Determine spawn position
         Vector3 spawnPos = GetSpawnPosition();
         Debug.Log($"📍 Spawn position: {spawnPos}");
-        // ====================================
         
         // 7. Spawn player
         spawnedPlayer = Instantiate(prefab, spawnPos, Quaternion.identity);
@@ -120,26 +119,22 @@ public class PlayerBundleLoader : MonoBehaviour
         
         Debug.Log($"✅ Player spawned!");
         
-        // 8. SETUP PLAYER COMPONENTS
+        // 8. Setup player components
         yield return StartCoroutine(SetupPlayerComponents(spawnedPlayer));
         
-        // 9. Load play time nếu có
+        // 9. Load play time if component exists
         LoadPlayTime();
         
         // 10. Unload bundle
         bundle.Unload(false);
         
-        Debug.Log("═══════════════════════════════════");
+        Debug.Log("╚═══════════════════════════════════╝");
         
         isLoading = false;
     }
     
-    /// <summary>
-    /// Lấy vị trí spawn (từ save hoặc default)
-    /// </summary>
     Vector3 GetSpawnPosition()
     {
-        // Kiểm tra có save data không
         if (PlayerPrefs.HasKey("PlayerPosX"))
         {
             float x = PlayerPrefs.GetFloat("PlayerPosX");
@@ -150,7 +145,6 @@ public class PlayerBundleLoader : MonoBehaviour
             return new Vector3(x, y, z);
         }
         
-        // Nếu không có save, dùng spawn point hoặc default
         if (spawnPoint != null)
         {
             Debug.Log("📍 Using spawn point");
@@ -161,85 +155,102 @@ public class PlayerBundleLoader : MonoBehaviour
         return defaultSpawnPosition;
     }
     
-    /// <summary>
-    /// Load play time từ save
-    /// </summary>
     void LoadPlayTime()
     {
         if (playTimeScore == null)
             return;
         
+        var type = playTimeScore.GetType();
+        
         if (PlayerPrefs.HasKey("PlayTime"))
         {
             float savedTime = PlayerPrefs.GetFloat("PlayTime", 0f);
-            playTimeScore.SetTime(savedTime);
-            playTimeScore.StartTimer();
+            
+            var setTimeMethod = type.GetMethod("SetTime");
+            if (setTimeMethod != null)
+            {
+                setTimeMethod.Invoke(playTimeScore, new object[] { savedTime });
+            }
+            
+            var startMethod = type.GetMethod("StartTimer");
+            if (startMethod != null)
+            {
+                startMethod.Invoke(playTimeScore, null);
+            }
+            
             Debug.Log($"⏱️ Loaded play time: {savedTime}s");
         }
         else
         {
-            playTimeScore.ResetTimer();
-            playTimeScore.StartTimer();
+            var resetMethod = type.GetMethod("ResetTimer");
+            if (resetMethod != null)
+            {
+                resetMethod.Invoke(playTimeScore, null);
+            }
+            
+            var startMethod = type.GetMethod("StartTimer");
+            if (startMethod != null)
+            {
+                startMethod.Invoke(playTimeScore, null);
+            }
+            
             Debug.Log("⏱️ Started new timer");
         }
     }
     
-    /// <summary>
-    /// Setup tất cả components sau khi spawn
-    /// </summary>
     IEnumerator SetupPlayerComponents(GameObject player)
     {
         Debug.Log("🔧 Setting up player...");
         
-        // 1. Get PlayerMovement
+        // Get PlayerMovement component directly
         PlayerMovement movement = player.GetComponent<PlayerMovement>();
         
         if (movement == null)
         {
-            Debug.LogError("❌ PlayerMovement không tìm thấy!");
-            yield break;
-        }
-        
-        // 2. FIX INPUTACTIONASSET (Dùng Reflection)
-        if (playerInputAsset != null)
-        {
-            Debug.Log("🎮 Assigning InputActionAsset...");
-            
-            // Disable trước
-            movement.enabled = false;
-            
-            // Gán InputActionAsset bằng reflection
-            var inputField = typeof(PlayerMovement).GetField("inputAsset", 
-                System.Reflection.BindingFlags.NonPublic | 
-                System.Reflection.BindingFlags.Instance);
-            
-            if (inputField != null)
-            {
-                inputField.SetValue(movement, playerInputAsset);
-                Debug.Log("✅ InputActionAsset assigned!");
-            }
-            else
-            {
-                Debug.LogWarning("⚠️ Không tìm thấy field 'inputAsset'");
-            }
-            
-            // Wait 1 frame
-            yield return null;
-            
-            // Enable lại
-            movement.enabled = true;
-            
-            Debug.Log("✅ PlayerMovement enabled!");
+            Debug.LogWarning("⚠️ PlayerMovement component not found on player!");
         }
         else
         {
-            Debug.LogError("❌ PlayerInputAsset NULL! Hãy gán trong Inspector!");
+            // Setup InputActionAsset
+            if (playerInputAsset != null)
+            {
+                Debug.Log("🎮 Assigning InputActionAsset...");
+                
+                // Disable component
+                movement.enabled = false;
+                
+                // Use reflection to set the inputAsset field
+                var inputField = typeof(PlayerMovement).GetField("inputAsset", 
+                    System.Reflection.BindingFlags.NonPublic | 
+                    System.Reflection.BindingFlags.Instance);
+                
+                if (inputField != null)
+                {
+                    inputField.SetValue(movement, playerInputAsset);
+                    Debug.Log("✅ InputActionAsset assigned!");
+                }
+                else
+                {
+                    Debug.LogWarning("⚠️ Field 'inputAsset' not found in PlayerMovement");
+                }
+                
+                yield return null;
+                
+                // Re-enable component
+                movement.enabled = true;
+                
+                Debug.Log("✅ PlayerMovement enabled!");
+            }
+            else
+            {
+                Debug.LogError("❌ PlayerInputAsset is NULL! Please assign in Inspector!");
+            }
         }
         
-        // 3. Setup Tag
+        // Setup Tag
         player.tag = "Player";
         
-        // 4. Setup Camera Follow
+        // Setup Camera Follow
         if (enableCameraFollow && mainCamera != null)
         {
             SetupCameraFollow(player.transform);
@@ -248,11 +259,9 @@ public class PlayerBundleLoader : MonoBehaviour
         Debug.Log("✅ Player setup completed!");
     }
     
-    /// <summary>
-    /// Setup camera follow player
-    /// </summary>
     void SetupCameraFollow(Transform target)
     {
+        // Check if CameraFollow already exists
         CameraFollow camFollow = mainCamera.GetComponent<CameraFollow>();
         
         if (camFollow == null)
@@ -267,17 +276,11 @@ public class PlayerBundleLoader : MonoBehaviour
         Debug.Log("✅ Camera follow setup!");
     }
     
-    /// <summary>
-    /// Get player reference
-    /// </summary>
     public GameObject GetPlayer()
     {
         return spawnedPlayer;
     }
     
-    /// <summary>
-    /// Reload player với skin khác
-    /// </summary>
     public void ReloadPlayer(string newSkinVersion)
     {
         if (spawnedPlayer != null)

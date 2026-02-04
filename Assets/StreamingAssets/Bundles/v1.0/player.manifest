@@ -1,0 +1,69 @@
+ManifestFileVersion: 0
+UnityVersion: 6000.5.0a5
+CRC: 2332761164
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: e6fa99f1dd1e125af5dd58947d3e606e
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 07cfa34ae095a302a09125c889cfbdf4
+  IncrementalBuildHash:
+    serializedVersion: 2
+    Hash: c089394d52eac5439787f80ee6e1151f
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 74
+  Script: {instanceID: 0}
+- Class: 90
+  Script: {instanceID: 0}
+- Class: 91
+  Script: {instanceID: 0}
+- Class: 95
+  Script: {instanceID: 0}
+- Class: 114
+  Script: {fileID: 11500000, guid: 4a9503bc07d6e75cd95deefe2aaa3889, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 9f1345d2b5f5df447a2b535776108e26, type: 3}
+- Class: 114
+  Script: {fileID: 11500000, guid: 39fa3d8997a24136984ca6e2c99902bc, type: 3}
+- Class: 115
+  Script: {instanceID: 0}
+- Class: 137
+  Script: {instanceID: 0}
+- Class: 143
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers:
+- AssemblyName: Unity.InputSystem
+  ClassName: UnityEngine.InputSystem.InputAction
+- AssemblyName: Unity.InputSystem
+  ClassName: UnityEngine.InputSystem.InputActionMap
+- AssemblyName: Unity.InputSystem
+  ClassName: UnityEngine.InputSystem.InputBinding
+- AssemblyName: Unity.InputSystem
+  ClassName: UnityEngine.InputSystem.InputControlScheme
+- AssemblyName: Unity.InputSystem
+  ClassName: UnityEngine.InputSystem.InputControlScheme/DeviceRequirement
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.LayerMask
+- AssemblyName: UnityEngine.CoreModule
+  ClassName: UnityEngine.Vector3
+Assets:
+- Assets/Prefabs/unitychan 1.prefab
+Dependencies: []
