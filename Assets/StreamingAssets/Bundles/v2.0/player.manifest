@@ -1,16 +1,16 @@
 ManifestFileVersion: 0
 UnityVersion: 6000.5.0a5
-CRC: 2058226877
+CRC: 722673569
 Hashes:
   AssetFileHash:
     serializedVersion: 2
-    Hash: 2d65046cc625fb3209eaaa26efbf0f60
+    Hash: 200ee7ffeefb4cb33bf1165e2e0c5b60
   TypeTreeHash:
     serializedVersion: 2
-    Hash: d405ec3f36ae715db63be0c5f6d3fff1
+    Hash: 72902649026565409a8b20e326b03d7c
   IncrementalBuildHash:
     serializedVersion: 2
-    Hash: d018dea8d699986fdfe1e6dd2b4d055c
+    Hash: 20e989571a337d2c4ba5e9d8f9ef49c2
 HashAppended: 0
 ClassTypes:
 - Class: 1
@@ -60,8 +60,6 @@ SerializeReferenceClassIdentifiers:
   ClassName: UnityEngine.InputSystem.InputControlScheme
 - AssemblyName: Unity.InputSystem
   ClassName: UnityEngine.InputSystem.InputControlScheme/DeviceRequirement
-- AssemblyName: UnityEngine.CoreModule
-  ClassName: UnityEngine.LayerMask
 - AssemblyName: UnityEngine.CoreModule
   ClassName: UnityEngine.Vector3
 Assets:

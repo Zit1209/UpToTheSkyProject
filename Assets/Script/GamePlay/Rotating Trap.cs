@@ -13,6 +13,7 @@ public class RotatingTrapZone : MonoBehaviour
     
     [Header("Knockback Settings")]
     [SerializeField] private float knockbackForce = 25f;
+    [SerializeField] private float knockbackDuration = 1f;
     
     private BoxCollider triggerZone;
     private bool trapActive = false;
@@ -38,7 +39,7 @@ public class RotatingTrapZone : MonoBehaviour
                 rotatingTrapComponent = trapObject.AddComponent<RotatingTrap>();
             }
             
-            rotatingTrapComponent.Initialize(rotationSpeed, knockbackForce, playerTag, rotationAxis);
+            rotatingTrapComponent.Initialize(rotationSpeed, knockbackForce, knockbackDuration, playerTag, rotationAxis);
             rotatingTrapComponent.SetActive(false);
         }
     }
@@ -72,14 +73,16 @@ public class RotatingTrap : MonoBehaviour
 {
     private float rotationSpeed;
     private float knockbackForce;
+    private float knockbackDuration;
     private string playerTag;
     private bool isActive = false;
     private RotatingTrapZone.RotationAxis rotationAxis;
 
-    public void Initialize(float speed, float knockback, string tag, RotatingTrapZone.RotationAxis axis)
+    public void Initialize(float speed, float knockback, float duration, string tag, RotatingTrapZone.RotationAxis axis)
     {
         rotationSpeed = speed;
         knockbackForce = knockback;
+        knockbackDuration = duration;
         playerTag = tag;
         rotationAxis = axis;
         
@@ -146,7 +149,8 @@ public class RotatingTrap : MonoBehaviour
         
         if (playerMovement != null)
         {
-            playerMovement.EnterKnockbackState(knockbackDirection, knockbackForce, 1f);
+            // ===== UPDATED: Uses new knockback method =====
+            playerMovement.EnterKnockbackState(knockbackDirection, knockbackForce, knockbackDuration);
         }
         else
         {

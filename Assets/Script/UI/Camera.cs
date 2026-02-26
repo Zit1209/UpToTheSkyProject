@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Camera tự động follow player - FIXED: Không xoay player nữa
+/// Camera tự động follow player - UPDATED: Hỗ trợ pause system
 /// </summary>
 public class CameraFollow : MonoBehaviour
 {
@@ -70,11 +70,23 @@ public class CameraFollow : MonoBehaviour
     
     void Update()
     {
+        // KIỂM TRA PAUSE - Không xử lý input khi pause
+        if (PauseManager.IsPaused())
+        {
+            return;
+        }
+        
         HandleCursorToggle();
     }
     
     void LateUpdate()
     {
+        // KIỂM TRA PAUSE - Không update camera khi pause
+        if (PauseManager.IsPaused())
+        {
+            return;
+        }
+        
         if (target == null)
             return;
         

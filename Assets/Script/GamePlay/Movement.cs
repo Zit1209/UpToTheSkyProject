@@ -1,6 +1,12 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+/// <summary>
+/// Player Movement Controller - SIMPLIFIED VERSION
+/// - Removed wall climbing
+/// - Uses CharacterController's built-in gravity
+/// - Cleaner and more maintainable
+/// </summary>
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
@@ -9,22 +15,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float runSpeed = 8f;
 
     [Header("Jump Settings")]
-    [SerializeField] private float jumpImpulse = 12f;
-    [SerializeField] private float forwardJumpBoost = 1.8f;
+    [SerializeField] private float jumpHeight = 2f;
+    [SerializeField] private float forwardJumpBoost = 1.5f;
     [SerializeField] private float airControlStrength = 0.3f;
 
-    [Header("Gravity Settings")]
-    [SerializeField] private float baseGravity = -25f;
-    [SerializeField] private float risingGravityMultiplier = 1f;
-    [SerializeField] private float fallingGravityMultiplier = 2f;
-    [SerializeField] private float maxFallSpeed = -30f;
-
-    [Header("Climbing Settings")]
-    [SerializeField] private float climbSpeed = 3f;
-    [SerializeField] private float climbRunSpeed = 5f;
-    [SerializeField] private float wallDetectionDistance = 0.6f;
-    [SerializeField] private float wallJumpForce = 10f;
-    [SerializeField] private LayerMask wallLayer = -1;
+    [Header("Gravity")]
+    [SerializeField] private float gravityMultiplier = 2f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -38,26 +34,29 @@ public class PlayerMovement : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
 
+    // Components
     private CharacterController controller;
+    
+    // Input Actions
     private InputAction moveAction;
     private InputAction jumpAction;
     private InputAction runAction;
+    
+    // Movement State
     private Vector3 velocity;
     private Vector2 moveInput;
     private bool isRunning;
     private bool isGrounded;
-    private bool isTouchingWall;
-    private Vector3 wallNormal;
     private bool jumpRequested;
-    private bool climbingDisabled = false;
-    private float climbDisableTimer = 0f;
-
+    
+    // Knockback System
     private bool isInKnockback = false;
     private float knockbackTimer = 0f;
 
-    private enum MovementState { Ground, Air, Climb, Knockback }
+    private enum MovementState { Ground, Air, Knockback }
     private MovementState currentState = MovementState.Ground;
 
+    // Animation Hashes
     private int speedHash;
     private int directionHash;
     private int jumpHash;
@@ -67,10 +66,18 @@ public class PlayerMovement : MonoBehaviour
     
     // Dead zone để tránh drift
     private const float INPUT_DEADZONE = 0.1f;
+    
+    // Gravity constant
+    private float gravity;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+        
+        // Calculate gravity from jump height
+        // gravity = (2 * jumpHeight) / (timeToJumpApex^2)
+        // Using Physics.gravity as base and applying multiplier
+        gravity = Physics.gravity.y * gravityMultiplier;
         
         if (animator == null)
         {
@@ -87,6 +94,7 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
+        // Animation hashes
         speedHash = Animator.StringToHash("Speed");
         directionHash = Animator.StringToHash("Direction");
         jumpHash = Animator.StringToHash("Jump");
@@ -94,6 +102,7 @@ public class PlayerMovement : MonoBehaviour
         jumpHeightHash = Animator.StringToHash("JumpHeight");
         gravityCeHash = Animator.StringToHash("GravityCe");
         
+        // Setup Input Actions
         if (inputAsset != null)
         {
             var playerActionMap = inputAsset.FindActionMap("Player");
@@ -151,8 +160,13 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        // Skip update if paused
+        if (PauseManager.IsPaused())
+        {
+            return;
+        }
+        
         UpdateKnockbackTimer();
-        UpdateClimbDisableTimer();
         
         if (!isInKnockback)
         {
@@ -160,37 +174,10 @@ public class PlayerMovement : MonoBehaviour
         }
         
         CheckGrounded();
-        DetectWall();
-        
         ProcessJump();
-        
         UpdateState();
         HandleMovement();
         UpdateAnimator();
-    }
-
-    private void UpdateAnimator()
-    {
-        if (animator == null) return;
-        
-        float speedValue = 0f;
-        
-        if (moveInput.magnitude > INPUT_DEADZONE)
-        {
-            speedValue = isRunning ? 1f : 0.5f; 
-        }
-        
-        animator.SetFloat(speedHash, speedValue);
-        animator.SetFloat(directionHash, moveInput.x);
-        
-        bool isResting = isGrounded && moveInput.magnitude < INPUT_DEADZONE && !isInKnockback;
-        animator.SetBool(restHash, isResting);
-        
-        float jumpHeight = isGrounded ? 0f : Mathf.Clamp01((velocity.y + 10f) / 20f);
-        animator.SetFloat(jumpHeightHash, jumpHeight);
-
-        float gravityValue = isGrounded ? 0f : Mathf.Clamp01(-velocity.y / maxFallSpeed);
-        animator.SetFloat(gravityCeHash, gravityValue);
     }
 
     private void UpdateKnockbackTimer()
@@ -202,18 +189,6 @@ public class PlayerMovement : MonoBehaviour
             {
                 isInKnockback = false;
                 currentState = MovementState.Air;
-            }
-        }
-    }
-
-    private void UpdateClimbDisableTimer()
-    {
-        if (climbingDisabled)
-        {
-            climbDisableTimer -= Time.deltaTime;
-            if (climbDisableTimer <= 0f)
-            {
-                climbingDisabled = false;
             }
         }
     }
@@ -257,97 +232,44 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
         
+        // Use CharacterController's built-in ground detection
         isGrounded = controller.isGrounded;
-    }
-
-    private void DetectWall()
-    {
-        if (climbingDisabled || isInKnockback)
-        {
-            isTouchingWall = false;
-            return;
-        }
-
-        isTouchingWall = false;
-
-        Vector3[] directions = {
-            transform.forward,
-            -transform.forward,
-            transform.right,
-            -transform.right,
-            (transform.forward + transform.right).normalized,
-            (transform.forward - transform.right).normalized,
-            (-transform.forward + transform.right).normalized,
-            (-transform.forward - transform.right).normalized
-        };
-
-        foreach (Vector3 dir in directions)
-        {
-            if (Physics.Raycast(transform.position + Vector3.up * 0.5f, dir, out RaycastHit hit, wallDetectionDistance, wallLayer))
-            {
-                if (Vector3.Dot(hit.normal, Vector3.up) < 0.1f)
-                {
-                    isTouchingWall = true;
-                    wallNormal = hit.normal;
-                    break;
-                }
-            }
-        }
     }
 
     private void OnJumpPerformed(InputAction.CallbackContext context)
     {
-        if (!isInKnockback)
-        {
-            jumpRequested = true;
-        }
+        jumpRequested = true;
     }
 
     private void ProcessJump()
     {
-        if (!jumpRequested || isInKnockback)
+        if (!jumpRequested)
             return;
 
         jumpRequested = false;
 
-        switch (currentState)
-        {
-            case MovementState.Ground:
-                if (isGrounded)
-                {
-                    PerformGroundJump();
-                }
-                break;
+        if (isInKnockback)
+            return;
 
-            case MovementState.Climb:
-                PerformWallJump();
-                break;
+        // Only jump when grounded
+        if (currentState == MovementState.Ground && isGrounded)
+        {
+            PerformGroundJump();
         }
     }
 
     private void PerformGroundJump()
     {
-        velocity.y = jumpImpulse;
+        // Calculate jump velocity using: v = sqrt(2 * jumpHeight * gravity)
+        velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
 
+        // Add forward momentum when running
         if (isRunning && moveInput.magnitude > INPUT_DEADZONE)
         {
             Vector3 moveDirection = GetCameraRelativeMovement();
             velocity.x += moveDirection.x * runSpeed * (forwardJumpBoost - 1f);
             velocity.z += moveDirection.z * runSpeed * (forwardJumpBoost - 1f);
         }
-
-        if (animator != null)
-        {
-            animator.SetTrigger(jumpHash);
-        }
-
-        currentState = MovementState.Air;
-    }
-
-    private void PerformWallJump()
-    {
-        velocity = wallNormal * wallJumpForce;
-        velocity.y = jumpImpulse * 0.9f;
 
         if (animator != null)
         {
@@ -369,32 +291,12 @@ public class PlayerMovement : MonoBehaviour
                 {
                     currentState = MovementState.Air;
                 }
-                else if (isTouchingWall && !isGrounded && !climbingDisabled)
-                {
-                    currentState = MovementState.Climb;
-                }
                 break;
 
             case MovementState.Air:
                 if (isGrounded && velocity.y <= 0f)
                 {
                     currentState = MovementState.Ground;
-                }
-                else if (isTouchingWall && velocity.y <= 0f && !climbingDisabled)
-                {
-                    currentState = MovementState.Climb;
-                    velocity = Vector3.zero;
-                }
-                break;
-
-            case MovementState.Climb:
-                if (isGrounded || climbingDisabled)
-                {
-                    currentState = MovementState.Ground;
-                }
-                else if (!isTouchingWall)
-                {
-                    currentState = MovementState.Air;
                 }
                 break;
         }
@@ -412,15 +314,12 @@ public class PlayerMovement : MonoBehaviour
                 HandleAirMovement();
                 break;
 
-            case MovementState.Climb:
-                HandleClimbingMovement();
-                break;
-
             case MovementState.Knockback:
                 HandleKnockbackMovement();
                 break;
         }
 
+        // Move the character
         controller.Move(velocity * Time.deltaTime);
     }
 
@@ -452,7 +351,7 @@ public class PlayerMovement : MonoBehaviour
         // Tính movement direction
         Vector3 direction = (cameraForward * moveInput.y + cameraRight * moveInput.x);
         
-        // QUAN TRỌNG: Chỉ normalize nếu magnitude > deadzone
+        // Chỉ normalize nếu magnitude > deadzone
         if (direction.magnitude > INPUT_DEADZONE)
         {
             return direction.normalized;
@@ -486,6 +385,7 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
+        // Apply slight downward force when grounded to stick to ground
         if (isGrounded && velocity.y <= 0f)
         {
             velocity.y = -2f;
@@ -498,6 +398,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleAirMovement()
     {
+        // Air control - reduced movement in air
         if (moveInput.magnitude > INPUT_DEADZONE)
         {
             float targetSpeed = isRunning ? runSpeed : walkSpeed;
@@ -511,18 +412,6 @@ public class PlayerMovement : MonoBehaviour
         ApplyGravity();
     }
 
-    private void HandleClimbingMovement()
-    {
-        float speed = isRunning ? climbRunSpeed : climbSpeed;
-
-        Vector3 up = Vector3.up;
-        Vector3 right = Vector3.Cross(wallNormal, up).normalized;
-
-        Vector3 climbDirection = (up * moveInput.y) + (right * moveInput.x);
-
-        velocity = climbDirection * speed;
-    }
-
     private void HandleKnockbackMovement()
     {
         ApplyGravity();
@@ -530,75 +419,82 @@ public class PlayerMovement : MonoBehaviour
 
     private void ApplyGravity()
     {
-        float gravityMultiplier = velocity.y > 0f ? risingGravityMultiplier : fallingGravityMultiplier;
-        
-        velocity.y += baseGravity * gravityMultiplier * Time.deltaTime;
-        
-        velocity.y = Mathf.Max(velocity.y, maxFallSpeed);
+        // Use CharacterController's gravity
+        velocity.y += gravity * Time.deltaTime;
     }
 
-    private void OnControllerColliderHit(ControllerColliderHit hit)
+    private void UpdateAnimator()
     {
-        if (isInKnockback)
-            return;
-
-        if (currentState == MovementState.Air)
-        {
-            if (Vector3.Dot(hit.normal, Vector3.up) < 0.1f)
-            {
-                isTouchingWall = true;
-                wallNormal = hit.normal;
-            }
-        }
-    }
-
-    public void ForceExitClimb()
-    {
-        if (currentState == MovementState.Climb)
-        {
-            currentState = MovementState.Air;
-        }
-    }
-
-    public void DisableClimbForSeconds(float duration)
-    {
-        climbingDisabled = true;
-        climbDisableTimer = duration;
+        if (animator == null) return;
         
-        if (currentState == MovementState.Climb)
+        float speedValue = 0f;
+        
+        if (moveInput.magnitude > INPUT_DEADZONE)
         {
-            currentState = MovementState.Air;
+            speedValue = isRunning ? 1f : 0.5f; 
         }
+        
+        animator.SetFloat(speedHash, speedValue);
+        animator.SetFloat(directionHash, moveInput.x);
+        
+        bool isResting = isGrounded && moveInput.magnitude < INPUT_DEADZONE && !isInKnockback;
+        animator.SetBool(restHash, isResting);
+        
+        // Jump height animation (0 to 1 based on velocity)
+        float jumpHeight = isGrounded ? 0f : Mathf.Clamp01((velocity.y + 10f) / 20f);
+        animator.SetFloat(jumpHeightHash, jumpHeight);
+
+        // Gravity animation (0 to 1 based on fall speed)
+        float gravityValue = isGrounded ? 0f : Mathf.Clamp01(-velocity.y / 30f);
+        animator.SetFloat(gravityCeHash, gravityValue);
     }
 
+    // ===== PUBLIC METHODS =====
+
+    /// <summary>
+    /// Apply knockback to player
+    /// </summary>
     public void ApplyKnockback(Vector3 direction, float force)
     {
         velocity = direction * force;
-        velocity.y = Mathf.Max(velocity.y, jumpImpulse * 0.5f);
+        velocity.y = Mathf.Max(velocity.y, Mathf.Sqrt(jumpHeight * -2f * gravity) * 0.5f);
     }
 
+    /// <summary>
+    /// Enter knockback state with duration
+    /// </summary>
     public void EnterKnockbackState(Vector3 direction, float force, float duration)
     {
         isInKnockback = true;
         knockbackTimer = duration;
         currentState = MovementState.Knockback;
         
-        climbingDisabled = true;
-        climbDisableTimer = duration;
-        
         velocity = direction * force;
-        
         moveInput = Vector2.zero;
     }
 
-    public bool IsClimbing()
-    {
-        return currentState == MovementState.Climb;
-    }
-    
+    /// <summary>
+    /// Set camera transform reference
+    /// </summary>
     public void SetCameraTransform(Transform camera)
     {
         cameraTransform = camera;
         Debug.Log($"✅ PlayerMovement: Camera reference set to {camera.name}");
+    }
+
+    /// <summary>
+    /// Get current movement state
+    /// </summary>
+    public bool IsGrounded()
+    {
+        return isGrounded;
+    }
+
+    /// <summary>
+    /// Get current velocity
+    /// </summary>
+    public Vector3 GetVelocity()
+    {
+        return velocity;
     }
 }

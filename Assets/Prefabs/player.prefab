@@ -2455,21 +2455,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   walkSpeed: 20
-  runSpeed: 35
-  jumpImpulse: 50
+  runSpeed: 50
+  jumpHeight: 15
   forwardJumpBoost: 100
-  airControlStrength: 0.2
-  baseGravity: -45
-  risingGravityMultiplier: 1
-  fallingGravityMultiplier: 8
-  maxFallSpeed: -30
-  climbSpeed: 3
-  climbRunSpeed: 5
-  wallDetectionDistance: 0.6
-  wallJumpForce: 10
-  wallLayer:
-    serializedVersion: 2
-    m_Bits: 0
+  airControlStrength: 0.5
+  gravityMultiplier: 3
   animator: {fileID: 8745164170762485339}
   inputAsset: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   cameraTransform: {fileID: 0}

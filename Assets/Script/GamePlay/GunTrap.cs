@@ -172,6 +172,7 @@ public class TrapBullet : MonoBehaviour
         if (playerMovement != null)
         {
             Vector3 knockbackDirection = moveDirection.normalized;
+            // ===== UPDATED: Uses new knockback with duration =====
             playerMovement.EnterKnockbackState(knockbackDirection, knockbackForce, knockbackDuration);
         }
 

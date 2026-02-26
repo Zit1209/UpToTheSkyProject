@@ -46,8 +46,8 @@ public class SaveDataTriggerZone : MonoBehaviour
             PlayerPrefs.SetFloat("PlayTime", playTimeScore.GetPlayTime());
         }
 
-        // ===== MỚI: SAVE SKIN =====
-        // Lưu skin hiện tại của player
+        // ===== SAVE SKIN =====
+
         if (SkinManager.HasSelectedSkin())
         {
             string currentSkin = SkinManager.LoadSelectedSkin();

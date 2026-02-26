@@ -12,7 +12,7 @@ public class TrapZone : MonoBehaviour
     
     [Header("Player Interaction")]
     [SerializeField] private float knockbackForce = 10f;
-    [SerializeField] private float climbDisableDuration = 2f;
+    [SerializeField] private float knockbackDuration = 1f;
     [SerializeField] private string playerTag = "Player";
     
     private BoxCollider triggerZone;
@@ -86,7 +86,7 @@ public class TrapZone : MonoBehaviour
                 trapComponent = trap.AddComponent<FallingTrap>();
             }
             
-            trapComponent.Initialize(knockbackForce, climbDisableDuration, playerTag);
+            trapComponent.Initialize(knockbackForce, knockbackDuration, playerTag);
         }
     }
 
@@ -95,35 +95,29 @@ public class TrapZone : MonoBehaviour
         StopSpawning();
     }
 }
-
 public class FallingTrap : MonoBehaviour
 {
-    private Rigidbody rb;
     private float knockbackForce;
-    private float climbDisableDuration;
+    private float knockbackDuration;
     private string playerTag;
     private bool hasHitPlayer = false;
 
-    public void Initialize(float knockback, float climbDisable, string tag)
+    public void Initialize(float knockback, float duration, string tag)
     {
         knockbackForce = knockback;
-        climbDisableDuration = climbDisable;
+        knockbackDuration = duration;
         playerTag = tag;
 
-        rb = GetComponent<Rigidbody>();
-        if (rb == null)
-        {
-            rb = gameObject.AddComponent<Rigidbody>();
-        }
-
-        rb.useGravity = true;
-        rb.isKinematic = false;
-
+        // KHÔNG tạo collider / rigidbody
+        // Chỉ đảm bảo collider đang hoạt động
         Collider col = GetComponent<Collider>();
         if (col == null)
         {
-            col = gameObject.AddComponent<BoxCollider>();
+            Debug.LogError($"❌ {name} không có Collider!");
+            enabled = false;
+            return;
         }
+
         col.isTrigger = false;
 
         Destroy(gameObject, 10f);
@@ -134,36 +128,47 @@ public class FallingTrap : MonoBehaviour
         if (hasHitPlayer)
             return;
 
+        // ===== HIT PLAYER =====
         if (collision.gameObject.CompareTag(playerTag))
         {
             hasHitPlayer = true;
-            HandlePlayerHit(collision.gameObject, collision);
+            HandlePlayerHit(collision.gameObject);
+            return;
         }
-        else if (collision.gameObject.layer == LayerMask.NameToLayer("Ground") || 
-                 collision.gameObject.CompareTag("Ground"))
+
+        // ===== HIT GROUND (CÁCH 3) =====
+        if (IsGroundCollision(collision))
         {
             Destroy(gameObject, 0.5f);
         }
     }
 
-    private void HandlePlayerHit(GameObject player, Collision collision)
+    /// <summary>
+    /// Kiểm tra có phải va chạm mặt đất không (dựa vào normal)
+    /// </summary>
+    private bool IsGroundCollision(Collision collision)
+    {
+        foreach (ContactPoint contact in collision.contacts)
+        {
+            // normal.y lớn → bề mặt hướng lên
+            if (contact.normal.y > 0.5f)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void HandlePlayerHit(GameObject player)
     {
         PlayerMovement playerController = player.GetComponent<PlayerMovement>();
-        
         if (playerController != null)
         {
-            playerController.ForceExitClimb();
-            playerController.DisableClimbForSeconds(climbDisableDuration);
+            Vector3 dir = (player.transform.position - transform.position).normalized;
+            dir.y = 0.3f;
+            dir.Normalize();
 
-            if (!playerController.IsClimbing())
-            {
-                Vector3 knockbackDirection = (player.transform.position - transform.position).normalized;
-                knockbackDirection.x = 0.3f;
-                knockbackDirection.y= 0.3f;
-                knockbackDirection.Normalize();
-                
-                playerController.ApplyKnockback(knockbackDirection, knockbackForce);
-            }
+            playerController.EnterKnockbackState(dir, knockbackForce, knockbackDuration);
         }
 
         Destroy(gameObject, 0.1f);
