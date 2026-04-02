@@ -66972,6 +66972,7 @@ GameObject:
   - component: {fileID: 1816120136}
   - component: {fileID: 1816120135}
   - component: {fileID: 1816120138}
+  - component: {fileID: 1816120139}
   m_Layer: 0
   m_Name: Portal
   m_TagString: Untagged
@@ -67095,12 +67096,26 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 4.78, y: -0.01, z: 4.09}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1816120139
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1816120133}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4234435b0a9f9c52abfebdb01e445acc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WinZone
+  winSceneName: WinScene
+  playerTag: Player
 --- !u!1 &1818540112
 GameObject:
   m_ObjectHideFlags: 0
@@ -77343,10 +77358,10 @@ SceneRoots:
   - {fileID: 33656859}
   - {fileID: 722553367}
   - {fileID: 1816120137}
+  - {fileID: 335325191}
   - {fileID: 1509962364}
   - {fileID: 1750159504}
   - {fileID: 148133328}
-  - {fileID: 335325191}
   - {fileID: 1739115931}
   - {fileID: 1188542116}
   - {fileID: 172367608}

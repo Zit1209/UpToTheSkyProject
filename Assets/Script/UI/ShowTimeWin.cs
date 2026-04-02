@@ -1,9 +1,10 @@
 using UnityEngine;
 using UnityEngine.Playables;
+using UnityEngine.SceneManagement;
 using TMPro;
 
 /// <summary>
-/// Shows saved time after credit timeline finishes
+/// Shows saved time after credit timeline finishes, then loads Main Menu
 /// Attach this to the same GameObject as PlayableDirector (Timeline)
 /// </summary>
 [RequireComponent(typeof(PlayableDirector))]
@@ -16,6 +17,10 @@ public class ShowTimeAfterCredit : MonoBehaviour
     [Header("Display Format")]
     [SerializeField] private string prefix = "Your Time: ";
     [SerializeField] private bool showMilliseconds = false;
+
+    [Header("Scene Settings")]
+    [SerializeField] private string menuSceneName = "MainMenu";
+    [SerializeField] private float delayBeforeMenu = 35f; // Giây chờ sau khi hiện time rồi mới chuyển
     
     private PlayableDirector director;
     private bool hasShownTime = false;
@@ -76,6 +81,15 @@ public class ShowTimeAfterCredit : MonoBehaviour
                 Debug.LogWarning("⚠️ No saved time found!");
             }
         }
+
+        // Chờ rồi chuyển về Main Menu
+        Invoke(nameof(LoadMainMenu), delayBeforeMenu);
+    }
+
+    private void LoadMainMenu()
+    {
+        Debug.Log($"➡️ Loading {menuSceneName}...");
+        SceneManager.LoadScene(menuSceneName);
     }
 
     private string FormatTime(float timeInSeconds)
